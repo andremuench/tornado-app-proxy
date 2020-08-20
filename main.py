@@ -25,7 +25,7 @@ class BaseHandler(SessionBaseHandler):
 class MainHandler(BaseHandler):
     def get(self):
         if not self.current_user:
-            self.redirect("/login")
+            self.redirect("/login?redirect_url=/")
             return
         name = tornado.escape.xhtml_escape(self.current_user.username)
         self.write("Hello, " + name)
@@ -33,14 +33,16 @@ class MainHandler(BaseHandler):
 
 class LoginHandler(BaseHandler):
     def get(self):
-        self.write('<html><body><form action="/login" method="post">'
+        self.write('<html><body><form action="" method="post">'
                    'Name: <input type="text" name="name">'
                    '<input type="submit" value="Sign in">'
                    '</form></body></html>')
 
     def post(self):
         self.session["user"] = User(self.get_argument("name"))
-        self.redirect("/")
+        redirect_url = self.get_query_argument("redirect_url", default="/")
+        print(redirect_url)
+        self.redirect(redirect_url)
 
 
 class LogoutHandler(BaseHandler):
@@ -176,7 +178,7 @@ class ApplicationListHandler(BaseHandler):
     
     def get(self):
         if not self.current_user:
-            self.redirect("/login")
+            self.redirect("/login?redirect_url=/app-list")
             return
         print(list(self.spec_provider.data.values()))
         self.render("app_list.html", appList=list(self.spec_provider.data.values()), title="App Proxy")
