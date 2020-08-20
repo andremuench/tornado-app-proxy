@@ -30,4 +30,11 @@ class Application:
             return f"{self.container_id}:{self.port}"
 
     
+class User:
+    
+    def __init__(self, username, groups=None):
+        self.username = username
+        self.groups = groups
 
+    def __repr__(self):
+        return f"<User(username={self.username},groups={self.groups})>"

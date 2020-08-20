@@ -1,5 +1,6 @@
 import tornado
 from collections.abc import Callable
+from model import User
 import re
 import tornado.web
 import tornado.ioloop
@@ -13,18 +14,22 @@ from docker_backend import DockerBackend
 from spec_provider import SpecProvider
 from tornado import gen
 from app_manager import ApplicationManager, ApplicationSpecNotFound
+from torndsession.sessionhandler import SessionBaseHandler
 
-class BaseHandler(tornado.web.RequestHandler):
+
+class BaseHandler(SessionBaseHandler):
     def get_current_user(self):
-        return self.get_secure_cookie("user")
+        return self.session.get("user")
+
 
 class MainHandler(BaseHandler):
     def get(self):
         if not self.current_user:
             self.redirect("/login")
             return
-        name = tornado.escape.xhtml_escape(self.current_user)
+        name = tornado.escape.xhtml_escape(self.current_user.username)
         self.write("Hello, " + name)
+
 
 class LoginHandler(BaseHandler):
     def get(self):
@@ -34,13 +39,13 @@ class LoginHandler(BaseHandler):
                    '</form></body></html>')
 
     def post(self):
-        self.set_secure_cookie("user", self.get_argument("name"))
+        self.session["user"] = User(self.get_argument("name"))
         self.redirect("/")
 
 
 class LogoutHandler(BaseHandler):
     def get(self):
-        self.clear_cookie("user")
+        self.session.pop("user")
         self.redirect("/")
 
 
@@ -181,8 +186,23 @@ docker_backend = DockerBackend()
 spec_provider = SpecProvider()
 app_manager = ApplicationManager(spec_provider, docker_backend)
 user_apps = dict()
+
+
+class Application(tornado.web.Application):
+    def __init__(self, handlers, **settings):
+        session_settings = dict(
+            driver="memory",
+            driver_settings=dict(
+                host=self,
+            ),
+            sid_name='torndsesionID',  # default is msid.
+            session_lifetime=1800,  # default is 1200 seconds.
+            force_persistence=True,
+        )
+        settings.update(session=session_settings)
+        tornado.web.Application.__init__(self, handlers=handlers, **settings)
  
-application = tornado.web.Application([
+application = Application([
     (r"/", MainHandler),
     (r"/app-list", ApplicationListHandler, dict(spec_provider=spec_provider)),
     (r"/login", LoginHandler),
