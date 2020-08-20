@@ -1,0 +1,31 @@
+<html>
+   <head>
+      <title>{{ title }}</title>
+      <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+      <style type="text/css">
+            body, html
+            {
+                margin: 0; padding: 0; height: 100%; overflow: hidden;
+            }
+
+            #content
+            {
+                position:absolute; left: 0; right: 0; bottom: 0; top: 0px;
+            }
+        </style>
+   </head>
+   <body>
+      <nav class="navbar navbar-dark bg-dark">
+        <span class="navbar-brand mb-0 h1">{{ title }}</span>
+        <span class="text-white">{{ current_user }}</span>
+      </nav>
+      <div id="container">
+        <ul>
+            {% for spec in appList %}
+            <li> 
+                <a href="/app/{{ spec.spec_id }}">{{ spec.display_name }}</a> <br>
+                <span>{{ spec.description }}</span>
+            </li>
+            {% end for %}
+ 
