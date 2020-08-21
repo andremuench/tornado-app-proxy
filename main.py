@@ -13,6 +13,7 @@ from docker_backend import DockerBackend
 from spec_provider import SpecProvider
 from tornado import gen
 from app_manager import ApplicationManager, ApplicationSpecNotFound
+from simple_auth import SimpleAuthBackend
 
 class BaseHandler(tornado.web.RequestHandler):
     def get_current_user(self):
@@ -25,23 +26,6 @@ class MainHandler(BaseHandler):
             return
         name = tornado.escape.xhtml_escape(self.current_user)
         self.write("Hello, " + name)
-
-class LoginHandler(BaseHandler):
-    def get(self):
-        self.write('<html><body><form action="/login" method="post">'
-                   'Name: <input type="text" name="name">'
-                   '<input type="submit" value="Sign in">'
-                   '</form></body></html>')
-
-    def post(self):
-        self.set_secure_cookie("user", self.get_argument("name"))
-        self.redirect("/")
-
-
-class LogoutHandler(BaseHandler):
-    def get(self):
-        self.clear_cookie("user")
-        self.redirect("/")
 
 
 class HeaderCallback(Callable):
@@ -181,16 +165,25 @@ docker_backend = DockerBackend()
 spec_provider = SpecProvider()
 app_manager = ApplicationManager(spec_provider, docker_backend)
 user_apps = dict()
- 
-application = tornado.web.Application([
+
+handlers = [
     (r"/", MainHandler),
     (r"/app-list", ApplicationListHandler, dict(spec_provider=spec_provider)),
-    (r"/login", LoginHandler),
-    (r"/logout", LogoutHandler),
     (r"/app-proxy/([\w\-]+)/websocket/", WebSocketHandler, dict(app_manager=app_manager)),
     (r"/app-proxy/([\w\-]+)/(.*)", ApplicationProxyHandler, dict(app_manager=app_manager)),
     (r"/app/([\w\-]+)", ApplicationHandler, dict(app_manager=app_manager)),
-], cookie_secret="__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__", websocket_ping_interval=10)
+]
+
+settings = {
+    "cookie_secret": "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__", 
+    "websocket_ping_interval": 10
+}
+
+auth_backend = SimpleAuthBackend()
+auth_backend.add_handler(handlers)
+settings.update(auth_backend.get_settings())
+ 
+application = tornado.web.Application(handlers, **settings)
 
 
 if __name__ == '__main__':
