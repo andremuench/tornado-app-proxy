@@ -1,5 +1,6 @@
 import tornado
 from collections.abc import Callable
+from model import User
 import re
 import tornado.web
 import tornado.ioloop
@@ -13,18 +14,25 @@ from docker_backend import DockerBackend
 from spec_provider import SpecProvider
 from tornado import gen
 from app_manager import ApplicationManager, ApplicationSpecNotFound
-from simple_auth import SimpleAuthBackend
+from saml import SamlBackend
+from torndsession.sessionhandler import SessionBaseHandler
 
-class BaseHandler(tornado.web.RequestHandler):
+
+class BaseHandler(SessionBaseHandler):
+
+    def prepare(self):
+        self.session["initial_request_url"] = self.request.uri
+    
     def get_current_user(self):
-        return self.get_secure_cookie("user")
+        return self.session.get("user")
+
 
 class MainHandler(BaseHandler):
     def get(self):
         if not self.current_user:
-            self.redirect("/login")
+            self.redirect("/login?redirect_url=/")
             return
-        name = tornado.escape.xhtml_escape(self.current_user)
+        name = tornado.escape.xhtml_escape(self.current_user.username)
         self.write("Hello, " + name)
 
 
@@ -155,7 +163,7 @@ class ApplicationListHandler(BaseHandler):
     
     def get(self):
         if not self.current_user:
-            self.redirect("/login")
+            self.redirect("/login?redirect_url=/app-list")
             return
         print(list(self.spec_provider.data.values()))
         self.render("app_list.html", appList=list(self.spec_provider.data.values()), title="App Proxy")
@@ -166,7 +174,21 @@ spec_provider = SpecProvider()
 app_manager = ApplicationManager(spec_provider, docker_backend)
 user_apps = dict()
 
-handlers = [
+class Application(tornado.web.Application):
+    def __init__(self, handlers, **settings):
+        session_settings = dict(
+            driver="memory",
+            driver_settings=dict(
+                host=self,
+            ),
+            sid_name='torndsesionID',  # default is msid.
+            session_lifetime=1800,  # default is 1200 seconds.
+            force_persistence=True,
+        )
+        settings.update(session=session_settings)
+        tornado.web.Application.__init__(self, handlers=handlers, **settings)
+
+handlers = [ 
     (r"/", MainHandler),
     (r"/app-list", ApplicationListHandler, dict(spec_provider=spec_provider)),
     (r"/app-proxy/([\w\-]+)/websocket/", WebSocketHandler, dict(app_manager=app_manager)),
@@ -176,10 +198,11 @@ handlers = [
 
 settings = {
     "cookie_secret": "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__", 
-    "websocket_ping_interval": 10
+    "websocket_ping_interval": 10,
+    "debug": True
 }
 
-auth_backend = SimpleAuthBackend()
+auth_backend = SamlBackend()
 auth_backend.add_handler(handlers)
 settings.update(auth_backend.get_settings())
  
