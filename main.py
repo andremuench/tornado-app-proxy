@@ -14,7 +14,7 @@ from docker_backend import DockerBackend
 from spec_provider import SpecProvider
 from tornado import gen
 from app_manager import ApplicationManager, ApplicationSpecNotFound
-from saml import SamlBackend
+from auth import get_auth_backend
 from torndsession.sessionhandler import SessionBaseHandler
 
 
@@ -202,7 +202,7 @@ settings = {
     "debug": True
 }
 
-auth_backend = SamlBackend()
+auth_backend = get_auth_backend('simple')
 auth_backend.add_handler(handlers)
 settings.update(auth_backend.get_settings())
  
