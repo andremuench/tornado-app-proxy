@@ -203,7 +203,7 @@ settings = {
     "debug": True
 }
 
-auth_backend = get_auth_backend('simple')
+auth_backend = get_auth_backend('jwt')
 auth_backend.add_handler(handlers)
 settings.update(auth_backend.get_settings())
  

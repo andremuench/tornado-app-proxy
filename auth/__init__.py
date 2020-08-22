@@ -7,3 +7,6 @@ def get_auth_backend(name):
     elif name == 'saml':
         from .saml import SamlBackend
         return SamlBackend()
+    elif name == 'jwt':
+        from .jwt import JWTAuthBackend
+        return JWTAuthBackend()
