@@ -1,6 +1,6 @@
 class ApplicationSpec:
     
-    def __init__(self, spec_id, display_name, description, image, cont_port, network=None, internal=False):
+    def __init__(self, spec_id, display_name, description, image, cont_port, groups=None, network=None, internal=False):
         self.spec_id = spec_id
         self.display_name = display_name
         self.description = description
@@ -8,6 +8,11 @@ class ApplicationSpec:
         self.cont_port = cont_port
         self.network = network
         self.internal = internal
+        self.groups = groups
+
+    @property
+    def public(self):
+        return self.groups is None 
 
 
 STATUS_STARTING = "starting"

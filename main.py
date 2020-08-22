@@ -162,11 +162,12 @@ class ApplicationListHandler(BaseHandler):
         self.spec_provider = spec_provider
     
     def get(self):
-        if not self.current_user:
+        user = self.current_user
+        if not user:
             self.redirect("/login?redirect_url=/app-list")
             return
-        print(list(self.spec_provider.data.values()))
-        self.render("app_list.html", appList=list(self.spec_provider.data.values()), title="App Proxy")
+        apps = spec_provider.list(user.groups)
+        self.render("app_list.html", appList=apps, title="App Proxy")
         
 
 docker_backend = DockerBackend()
@@ -202,7 +203,7 @@ settings = {
     "debug": True
 }
 
-auth_backend = get_auth_backend('saml')
+auth_backend = get_auth_backend('simple')
 auth_backend.add_handler(handlers)
 settings.update(auth_backend.get_settings())
  

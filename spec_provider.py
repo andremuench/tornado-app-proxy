@@ -11,3 +11,12 @@ class SpecProvider:
 
     def get(self, spec_id):
         return self.data.get(spec_id)
+
+    def list(self, groups):
+        def _gen():
+            for spec in self.data.values():
+                if spec.public:
+                    yield spec
+                elif set(spec.groups or []).insection(set(groups)):
+                    yield spec
+        return list(_gen())
