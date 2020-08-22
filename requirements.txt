@@ -8,6 +8,7 @@ docker==4.3.0
 idna==2.10
 isodate==0.6.0
 lxml==4.5.2
+marshmallow==3.7.1
 pycparser==2.20
 pycurl==7.43.0.5
 python3-saml==1.9.0

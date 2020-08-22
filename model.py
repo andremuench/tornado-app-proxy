@@ -14,6 +14,9 @@ class ApplicationSpec:
     def public(self):
         return self.groups is None 
 
+    def __repr__(self):
+        return str(self.__dict__)
+
 
 STATUS_STARTING = "starting"
 STATUS_STARTED = "started"

@@ -11,7 +11,7 @@ from tornado.websocket import websocket_connect
 import docker
 import time
 from docker_backend import DockerBackend
-from spec_provider import SpecProvider
+from spec import SpecProvider
 from tornado import gen
 from app_manager import ApplicationManager, ApplicationSpecNotFound
 from auth import get_auth_backend
@@ -203,7 +203,7 @@ settings = {
     "debug": True
 }
 
-auth_backend = get_auth_backend('jwt')
+auth_backend = get_auth_backend('simple')
 auth_backend.add_handler(handlers)
 settings.update(auth_backend.get_settings())
  
