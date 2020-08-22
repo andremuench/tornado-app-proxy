@@ -27,14 +27,33 @@ class LoginHandler(SessionBaseHandler):
         if errors:
             raise Exception(errors)
         self.session["user"] = User(auth.get_attributes()[SAML_UID_ATTR][0])
+        self.session["samlNameId"] = auth.get_nameid()
+        self.session["samlSessionIndex"] = auth.get_session_index()
         redirect_url = self.session.get("initial_request_url") or "/"
         self.redirect(redirect_url)
 
+
+class LogoutHandler(SessionBaseHandler):
+    def get(self):
+        req = prepare_tornado_request(self.request)
+        auth = init_saml_auth(req)
+        if 'sls' in req['get_data']:
+            _logout = lambda: self.session.pop("user")
+            url = auth.process_slo(delete_session=_logout)
+            errors = auth.get_errors()
+            if url:
+                self.redirect(url)
+        else:
+            name_id = self.session.get('samlNameId')
+            session_index = self.session.get('samlSessionIndex')
+            self.redirect(auth.logout(name_id=name_id, session_index=session_index))
+        
 
 class SamlBackend:
 
     def add_handler(self, handler):
         handler.append((r"/login", LoginHandler))
+        handler.append((r"/logout", LogoutHandler))
 
     def get_settings(self):
         return dict(saml_path="saml")
