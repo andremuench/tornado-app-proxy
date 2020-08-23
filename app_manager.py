@@ -46,7 +46,7 @@ class ApplicationManager:
         spec = self.spec_provider.get(spec_id)
         if not spec:
             raise ApplicationSpecNotFound
-        app = self.docker_backend.start_application(spec)
+        app = self.docker_backend.start_application(spec, user)
         app.user = user
         app.status = model.STATUS_STARTING
         self.register_app(user, app)

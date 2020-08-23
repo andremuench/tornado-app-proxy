@@ -16,7 +16,7 @@ class DockerBackend:
         self.next_port += 1
         return _port
 
-    def start_application(self, spec):
+    def start_application(self, spec, user):
         cont_port = spec.cont_port or 3838
         if not spec.internal:
             external_port = self.get_next_port()
@@ -24,7 +24,19 @@ class DockerBackend:
         else:
             _ports = dict()
 
-        container = self.client.containers.run(spec.image, detach=True, ports=_ports)
+        _user_env = {
+            "APP_PROXY_USER": user.username, 
+            "APP_PROXY_GROUPS": ",".join(user.groups)
+        }
+        _env = dict()
+        _env.update(spec.env_list)
+        _env.update(_user_env)
+
+        container = self.client.containers.run(spec.image, 
+            detach=True, 
+            ports=_ports, 
+            environment=_env,
+            network=spec.network)
         app = Application(spec, container_id=container.id)
         if not spec.internal:
             app.port = external_port

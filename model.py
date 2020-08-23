@@ -1,13 +1,15 @@
 class ApplicationSpec:
     
-    def __init__(self, spec_id, display_name, description, image, cont_port, groups=None, network=None, internal=False):
+    def __init__(self, spec_id, image, display_name=None, description=None, cont_port=None, 
+                 groups=None, network=None, env_list=None, internal=False):
         self.spec_id = spec_id
         self.display_name = display_name
         self.description = description
         self.image = image
         self.cont_port = cont_port
-        self.network = network
-        self.internal = internal
+        self.network = network or "bridge"
+        self.internal = internal or False
+        self.env_list = env_list or dict()
         self.groups = groups
 
     @property
@@ -42,7 +44,7 @@ class User:
     
     def __init__(self, username, groups=None):
         self.username = username
-        self.groups = groups
+        self.groups = groups or []
 
     def __repr__(self):
         return f"<User(username={self.username},groups={self.groups})>"
