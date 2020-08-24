@@ -179,9 +179,7 @@ class Application(tornado.web.Application):
     def __init__(self, handlers, **settings):
         session_settings = dict(
             driver="memory",
-            driver_settings=dict(
-                host=self,
-            ),
+            driver_settings={'host': self},
             sid_name='torndsesionID',  # default is msid.
             session_lifetime=1800,  # default is 1200 seconds.
             force_persistence=True,
@@ -208,7 +206,7 @@ auth_backend = get_auth_backend('simple')
 auth_backend.add_handler(handlers)
 settings.update(auth_backend.get_settings())
  
-application = tornado.web.Application(handlers, **settings)
+application = Application(handlers, **settings)
 
 
 if __name__ == '__main__':

@@ -40,7 +40,7 @@ class ApplicationManager:
         self.docker_backend = docker_backend
    
     def get_application(self, user, spec_id):
-        return self.data.get((user, spec_id))
+        return self.data.get((user.username, spec_id))
 
     async def start_application(self, user, spec_id):
         spec = self.spec_provider.get(spec_id)
@@ -66,11 +66,11 @@ class ApplicationManager:
         return app
 
     def register_app(self, user, app):
-        self.data[(user, app.spec.spec_id)] = app
+        self.data[(user.username, app.spec.spec_id)] = app
 
     def remove_application(self, app):
         self.docker_backend.stop_application(app)
         app.websocket.close(code=1001)
-        self.data.pop((app.user, app.spec.spec_id))
+        self.data.pop((app.user.username, app.spec.spec_id))
         
 
