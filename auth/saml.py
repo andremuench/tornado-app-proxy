@@ -38,7 +38,7 @@ class LogoutHandler(SessionBaseHandler):
         req = prepare_tornado_request(self.request)
         auth = init_saml_auth(req)
         if 'sls' in req['get_data']:
-            _logout = lambda: self.session.pop("user")
+            _logout = lambda: self.session.delete("user")
             url = auth.process_slo(delete_session=_logout)
             errors = auth.get_errors()
             if url:

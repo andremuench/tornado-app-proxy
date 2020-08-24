@@ -200,6 +200,7 @@ handlers = [
 settings = {
     "cookie_secret": "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__", 
     "websocket_ping_interval": 10,
+    "autoreload": False,
     "debug": True
 }
 
@@ -211,6 +212,8 @@ application = tornado.web.Application(handlers, **settings)
 
 
 if __name__ == '__main__':
-    application.listen(8888)
+    server = tornado.web.HTTPServer(application)
+    server.bind(8888)
+    server.start(1)
     ioloop = tornado.ioloop.IOLoop.current()
     ioloop.start()

@@ -1,6 +1,7 @@
 from torndsession.sessionhandler import SessionBaseHandler
 from model import User
 from tornado.web import HTTPError
+from .core import BaseLogoutHandler
 
 
 class LoginHandler(SessionBaseHandler):
@@ -29,12 +30,6 @@ class LoginHandler(SessionBaseHandler):
         self.redirect(redirect_url)
 
 
-class LogoutHandler(SessionBaseHandler):
-    def get(self):
-        self.session.pop("user")
-        self.redirect("/")
-
-
 users = {"andre": (User("andre", ["business", "admin"]), "abc")}
 
 
@@ -42,7 +37,7 @@ class SimpleAuthBackend:
     
     def add_handler(self, handler):
         handler.append((r"/login", LoginHandler, dict(auth_store=users)))
-        handler.append((r"/logout", LogoutHandler))
+        handler.append((r"/logout", BaseLogoutHandler))
 
     def get_settings(self):
         return dict()
