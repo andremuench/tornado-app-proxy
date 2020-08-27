@@ -12,6 +12,7 @@ marshmallow==3.7.1
 pycparser==2.20
 pycurl==7.43.0.5
 python3-saml==1.9.0
+redis==3.5.3
 requests==2.24.0
 six==1.15.0
 tornado==6.0.4
