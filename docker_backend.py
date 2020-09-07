@@ -37,7 +37,7 @@ class DockerBackend:
             ports=_ports, 
             environment=_env,
             network=spec.network)
-        app = Application(spec, container_id=container.id)
+        app = Application(spec.spec_id, container_id=container.id)
         if not spec.internal:
             app.port = external_port
             app.external = True

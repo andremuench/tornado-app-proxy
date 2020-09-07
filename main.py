@@ -13,7 +13,7 @@ import time
 from docker_backend import DockerBackend
 from spec import SpecProvider
 from tornado import gen
-from app_manager import ApplicationManager, ApplicationSpecNotFound, SessionApplicationStore
+from app_manager import ApplicationManager, ApplicationSpecNotFound, SessionApplicationStore, RedisApplicationStore
 from auth import get_auth_backend
 from torndsession.sessionhandler import SessionBaseHandler
 
@@ -36,109 +36,10 @@ class MainHandler(BaseHandler):
         self.write("Hello, " + name)
 
 
-class HeaderCallback(Callable):
-
-    def __init__(self):
-        self.headers = dict()
-
-    def __call__(self, line):
-        try:
-            k,v = line.strip().split(":")
-            self.headers[k.strip()] = v.strip()
-        except ValueError:
-            pass
-        
-
-class ApplicationProxyHandler(BaseHandler):
-
-    def initialize(self, spec_provider, docker_backend):
-        self.app_manager = ApplicationManager(SessionApplicationStore(self.session), spec_provider, docker_backend)
-
-    async def get(self, app_id, path):
-        if not self.current_user:
-            raise tornado.web.HTTPError(401)
-        app = self.app_manager.get_application(self.current_user, app_id)
-        if not app:
-            raise tornado.web.HTTPError(404)
-        app_url = app.get_url()
-        http_client = CurlAsyncHTTPClient()
-        _headers = self.request.headers
-        try:
-            header_c = HeaderCallback()
-            response = await http_client.fetch(f"http://{app_url}/{path}", raise_error=False,
-            header_callback=header_c, headers=_headers)
-        except CurlError:
-            if header_c.headers.get("Upgrade", None) == "websocket":
-                print("Upgrading in get")
-                self.set_status(101)
-                for k,v in header_c.headers.items():
-                    self.set_header(k,v)
-        except Exception as e:
-            print(path, "Error: %s" % e)
-        else:
-            if response.code == 200:
-                if response.headers["Content-Type"] == "text/html":
-                    body = re.sub(r"(href|src)=(\")?/",f"\\1=\\2/app-proxy/{app_id}", response.body.decode()).encode()
-                else:
-                    body = response.body
-                self.set_header("Content-Type", response.headers["Content-Type"])
-                self.write(body)
-
-    async def post(self, app_id, path):
-        if not self.current_user:
-            raise tornado.web.HTTPError(401)
-        app = self.app_manager.get_application(self.current_user, app_id)
-        if not app:
-            raise tornado.web.HTTPError(404)
-        app_url = app.get_url()
-
-        http_client = CurlAsyncHTTPClient()
-        _headers = self.request.headers
-        try:
-            header_c = HeaderCallback()
-            response = await http_client.fetch(f"http://{app_url}/{path}", method="POST", raise_error=False,
-                                               header_callback=header_c, headers=_headers,
-                                               allow_nonstandard_methods=True, body=self.request.body)
-        except Exception as e:
-            print(path, "Error: %s" % e)
-        else:
-            self.set_header("Content-Type", response.headers["Content-Type"])
-            self.set_status(response.code)
-            self.write(response.body)
-
-
-class WebSocketHandler(tornado.websocket.WebSocketHandler, BaseHandler):
-    def initialize(self, spec_provider, docker_backend):
-        self.app_manager = ApplicationManager(SessionApplicationStore(self.session), spec_provider, docker_backend)
-
-    async def open(self, app_id):
-        self.app_id = app_id
-        app = self.app_manager.get_application(self.current_user, self.app_id)
-
-        def call_write(msg):
-            if msg:
-                self.write_message(msg)
-            else:
-                self.app_manager.remove_application(self.current_user, self.app_id)
-                self.close()
-
-        self.websocket = await websocket_connect(f"ws://{app.get_url()}/websocket/", on_message_callback=call_write)
-
-    async def on_message(self, message):
-        if self.websocket:
-            self.websocket.write_message(message)
-
-    def on_pong(self, data):
-        self.app_manager.pong(self.current_user, self.app_id)
-
-    def on_close(self):
-        self.websocket.close(self.close_code, self.close_reason)
-
-
 class ApplicationHandler(BaseHandler):
 
-    def initialize(self, spec_provider, docker_backend):
-        self.app_manager = ApplicationManager(SessionApplicationStore(self.session), spec_provider, docker_backend)
+    def initialize(self, app_manager):
+        self.app_manager = app_manager
 
     def get(self, app_id):
         if not self.current_user:
@@ -174,13 +75,14 @@ class ApplicationListHandler(BaseHandler):
 
 docker_backend = DockerBackend()
 spec_provider = SpecProvider()
+app_manager = ApplicationManager(RedisApplicationStore(), spec_provider, docker_backend)
 
 class Application(tornado.web.Application):
     def __init__(self, handlers, **settings):
         session_settings = dict(
             driver="redis",
             driver_settings=dict(
-                host='localhost',
+                host='86d568cdf434',
                 port=6379,
                 db=0,
                 max_connections=1024,
@@ -192,11 +94,7 @@ class Application(tornado.web.Application):
 handlers = [ 
     (r"/", MainHandler),
     (r"/app-list", ApplicationListHandler, dict(spec_provider=spec_provider)),
-    (r"/app-proxy/([\w\-]+)/websocket/", WebSocketHandler, dict(spec_provider=spec_provider,
-    docker_backend=docker_backend)),
-    (r"/app-proxy/([\w\-]+)/(.*)", ApplicationProxyHandler, dict(spec_provider=spec_provider,
-    docker_backend=docker_backend)),
-    (r"/app/([\w\-]+)", ApplicationHandler, dict(spec_provider=spec_provider, docker_backend=docker_backend)),
+    (r"/app/([\w\-]+)", ApplicationHandler, dict(app_manager=app_manager))
 ]
 
 settings = {
@@ -216,6 +114,6 @@ application = Application(handlers, **settings)
 if __name__ == '__main__':
     server = tornado.web.HTTPServer(application)
     server.bind(8888)
-    server.start(0)
+    server.start(1)
     ioloop = tornado.ioloop.IOLoop.current()
     ioloop.start()

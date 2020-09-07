@@ -3,6 +3,9 @@ from tornado.curl_httpclient import CurlAsyncHTTPClient
 from tornado import gen
 import time
 import tornado.ioloop
+import redis
+import json
+from model import Application
 
 
 class NoSuccessfulPingError(Exception):
@@ -22,7 +25,7 @@ class ApplicationWatcher:
         client = CurlAsyncHTTPClient()
         while i < 10:
             try:
-                resp = await client.fetch(f"http://{self.url}")
+                resp = await client.fetch(self.url)
                 return
             except Exception as e:
                 print("Error during watching", e)
@@ -30,6 +33,27 @@ class ApplicationWatcher:
                 i += 1
                 await gen.sleep(10) 
         raise NoSuccessfulPingError
+
+
+class RedisApplicationStore:
+    
+    def __init__(self):
+        self.client = redis.Redis(host="86d568cdf434", port=6379, db=0)
+
+    def get(self, username, spec_id):
+        data = self.client.get(f"{username}+{spec_id}")
+        if not data:
+            return None
+        app = Application.from_dict(json.loads(data))
+        return app
+
+    def set(self, username, spec_id, app):
+        data = app.to_dict()
+        data = json.dumps(data)
+        self.client.set(f"{username}+{spec_id}", data)
+
+    def delete(self, username, spec_id):
+        self.client.delete(f"{username}+{spec_id}")
 
 
 class SessionApplicationStore:
@@ -80,18 +104,18 @@ class ApplicationManager:
         watcher = ApplicationWatcher(app.get_url())
         await watcher.watch()
         app.latest_ping = time.time()
-        self.app_store.set(user.username, spec_id, app)
         async def check_ping():
             while True:
+                await gen.sleep(60)
                 _app = self.app_store.get(user.username, spec_id)
                 now = time.time()
                 if int(now - _app.latest_ping) > 30:
                     print("No ping received since 30 sec - stopping")
                     self.remove_application(user, spec_id)
                     break
-                await gen.sleep(60)
         tornado.ioloop.IOLoop.current().spawn_callback(check_ping)
         app.status = model.STATUS_STARTED
+        self.app_store.set(user.username, spec_id, app)
         return app
 
     def remove_application(self, user, spec_id):

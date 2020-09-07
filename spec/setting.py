@@ -6,6 +6,8 @@ specs = [
         "container": {
             "image": "smst_app:1.1b0",
             "port": 3838,
+            "network": "local-net",
+            "internal": True
         }
     },
     {

@@ -26,11 +26,15 @@ class LoginHandler(SessionBaseHandler):
         if passwd != _pwd:
             raise HTTPError(403)
         self.session["user"] = _user
+        self.set_secure_cookie("user", _user.username)
         redirect_url = self.get_query_argument("redirect_url", default="/")
         self.redirect(redirect_url)
 
 
-users = {"andre": (User("andre", ["business", "admin"]), "abc")}
+users = {
+    "andre": (User("andre", ["business", "admin"]), "abc"),
+    "peter": (User("peter", ["business", "admin"]), "abc")
+}
 
 
 class SimpleAuthBackend:

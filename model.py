@@ -23,21 +23,36 @@ class ApplicationSpec:
 STATUS_STARTING = "starting"
 STATUS_STARTED = "started"
 
-class Application:
-    
-    def __init__(self, spec, container_id=None, port=None, external=False):
-        self.spec = spec
-        self.status = None
-        self.container_id = container_id
-        self.port = port
-        self.external = external
+DEFAULT_PORT = 3838
 
+class Application:
+
+    def __init__(self, spec_id, container_id=None, port=None, status=None, external=False, latest_ping=None):
+        self.spec_id = spec_id
+        self.status = status
+        self.container_id = container_id
+        self.port = port or DEFAULT_PORT
+        self.external = external
+        self.latest_ping = latest_ping 
+
+    
+    def to_dict(self):
+        data = dict()
+        data.update(self.__dict__)
+        data["url"] = self.get_url()
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        spec_id = data.pop("spec_id")
+        data.pop("url")
+        return Application(spec_id, **data)
 
     def get_url(self):
         if self.external:
-            return f"localhost:{self.port}"
+            return f"http://localhost:{self.port}"
         else:
-            return f"{self.container_id}:{self.port}"
+            return f"http://{self.container_id[:12]}:{self.port}"
 
     
 class User:

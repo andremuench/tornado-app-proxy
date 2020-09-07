@@ -25,8 +25,9 @@ class SpecSchema(Schema):
             display_name=data.get("display_name"), 
             description=data.get("description"), 
             cont_port=data["container"].get("port"),
+            network=data["container"].get("network"),
             groups=data.get("groups"),
-            internal=data.get("internal"),
+            internal=data["container"].get("internal"),
             env_list=data["container"].get("env")
             )
         
