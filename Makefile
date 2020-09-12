@@ -12,3 +12,11 @@ run:
 		--net $(NETWORK) \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(IMAGE) python3 main.py
+
+run_it:
+	docker run -it --rm \
+		--name $(CNT) \
+		--net $(NETWORK) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		$(IMAGE) bash
+

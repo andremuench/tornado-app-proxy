@@ -16,6 +16,8 @@ from tornado import gen
 from app_manager import ApplicationManager, ApplicationSpecNotFound, SessionApplicationStore, RedisApplicationStore
 from auth import get_auth_backend
 from torndsession.sessionhandler import SessionBaseHandler
+from tornado.web import StaticFileHandler
+import os
 
 
 class BaseHandler(SessionBaseHandler):
@@ -73,6 +75,16 @@ class ApplicationListHandler(BaseHandler):
         self.render("app_list.html", appList=apps, title="App Proxy")
         
 
+class ApplicationPingHandler(BaseHandler):
+    
+    def initialize(self, app_manager):
+        self.app_manager = app_manager
+
+    async def post(self, path):
+        user = self.current_user
+        await self.app_manager.on_pong(user, path)
+
+
 docker_backend = DockerBackend()
 spec_provider = SpecProvider()
 app_manager = ApplicationManager(RedisApplicationStore(), spec_provider, docker_backend)
@@ -91,18 +103,21 @@ class Application(tornado.web.Application):
         settings.update(session=session_settings)
         tornado.web.Application.__init__(self, handlers=handlers, **settings)
 
-handlers = [ 
-    (r"/", MainHandler),
-    (r"/app-list", ApplicationListHandler, dict(spec_provider=spec_provider)),
-    (r"/app/([\w\-]+)", ApplicationHandler, dict(app_manager=app_manager))
-]
-
 settings = {
     "cookie_secret": "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__", 
     "websocket_ping_interval": 10,
     "autoreload": False,
-    "debug": True
+    "debug": True,
+    "static_path": os.path.join(os.path.dirname(__file__), "static")
 }
+
+handlers = [ 
+    (r"/", MainHandler),
+    (r"/app-list", ApplicationListHandler, dict(spec_provider=spec_provider)),
+    (r"/app/([\w\-]+)", ApplicationHandler, dict(app_manager=app_manager)),
+    (r"/app-ping/([\w\-]+)", ApplicationPingHandler, dict(app_manager=app_manager)),
+    (r"/static/(.*)", StaticFileHandler, dict(path=settings["static_path"])),
+]
 
 auth_backend = get_auth_backend('simple')
 auth_backend.add_handler(handlers)

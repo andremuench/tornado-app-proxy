@@ -126,7 +126,7 @@ class ApplicationManager:
             pass
         self.app_store.delete(user.username, spec_id)
 
-    def pong(self, user, spec_id):
+    async def on_pong(self, user, spec_id):
         app = self.app_store.get(user.username, spec_id)
         app.latest_ping = time.time()
         self.app_store.set(user.username, spec_id, app)
