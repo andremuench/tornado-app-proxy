@@ -18,6 +18,7 @@ from auth import get_auth_backend
 from torndsession.sessionhandler import SessionBaseHandler
 from tornado.web import StaticFileHandler
 import os
+from health_check import HealthCheck
 
 
 class BaseHandler(SessionBaseHandler):
@@ -88,13 +89,16 @@ class ApplicationPingHandler(BaseHandler):
 docker_backend = DockerBackend()
 spec_provider = SpecProvider()
 app_manager = ApplicationManager(RedisApplicationStore(), spec_provider, docker_backend)
+health_check = HealthCheck(app_manager)
+
+
 
 class Application(tornado.web.Application):
     def __init__(self, handlers, **settings):
         session_settings = dict(
             driver="redis",
             driver_settings=dict(
-                host='86d568cdf434',
+                host='172.22.0.4',
                 port=6379,
                 db=0,
                 max_connections=1024,
@@ -126,9 +130,15 @@ settings.update(auth_backend.get_settings())
 application = Application(handlers, **settings)
 
 
+async def check_health():
+    while True:
+        await gen.sleep(30)
+        await health_check.run_check()
+
 if __name__ == '__main__':
     server = tornado.web.HTTPServer(application)
     server.bind(8888)
     server.start(1)
     ioloop = tornado.ioloop.IOLoop.current()
+    ioloop.add_callback(check_health)
     ioloop.start()

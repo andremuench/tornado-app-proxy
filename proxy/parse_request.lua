@@ -1,6 +1,7 @@
 local hmac = require "openssl.hmac"
 local base64 = require "base64"
 
+local parse_request = {}
 
 local function tohex(b)
     local x = ""
@@ -20,7 +21,7 @@ local function extractkv(token)
     end
 end
 
-function parse_cookie(cookie)
+function parse_request.parse_cookie(cookie)
 
     local i = 0
     local var = nil
@@ -48,7 +49,7 @@ function parse_cookie(cookie)
 
 end
 
-function check_cookie_items(var, val, msg, sig, secret)
+function parse_request.check_cookie_items(var, val, msg, sig, secret)
     
     local err = nil
     local ok = true
@@ -83,4 +84,4 @@ function check_cookie_items(var, val, msg, sig, secret)
     return ok, err
 end
 
-
+return parse_request

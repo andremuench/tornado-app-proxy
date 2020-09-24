@@ -41,7 +41,7 @@ class ApplicationWatcher:
 class RedisApplicationStore:
     
     def __init__(self):
-        self.client = redis.Redis(host="localhost", port=6379, db=0)
+        self.client = redis.Redis(host="172.22.0.4", port=6379, db=0)
 
     def _key(self, username, spec_id):
         return f"{username}+{spec_id}"
@@ -79,9 +79,11 @@ class RedisApplicationStore:
         data = app.to_dict()
         data = json.dumps(data)
         self.client.set(f"{username}+{spec_id}", data)
+        self.client.set(f"{username}+{spec_id}+url", app.get_url())
 
     def delete(self, username, spec_id):
         self.client.delete(f"{username}+{spec_id}")
+        self.client.delete(f"{username}+{spec_id}+url")
         data = self.client.get("#apps")
         if not data:
             return
