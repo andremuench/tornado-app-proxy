@@ -1,7 +1,7 @@
 import tornado
 from collections.abc import Callable
 from model import User
-import re
+import re 
 import tornado.web
 import tornado.ioloop
 from tornado.curl_httpclient import CurlAsyncHTTPClient, CurlError
@@ -98,7 +98,7 @@ class Application(tornado.web.Application):
         session_settings = dict(
             driver="redis",
             driver_settings=dict(
-                host='172.22.0.4',
+                host='redis-app-store',
                 port=6379,
                 db=0,
                 max_connections=1024,

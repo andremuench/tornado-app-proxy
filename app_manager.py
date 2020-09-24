@@ -41,7 +41,7 @@ class ApplicationWatcher:
 class RedisApplicationStore:
     
     def __init__(self):
-        self.client = redis.Redis(host="172.22.0.4", port=6379, db=0)
+        self.client = redis.Redis(host="redis-app-store", port=6379, db=0)
 
     def _key(self, username, spec_id):
         return f"{username}+{spec_id}"
